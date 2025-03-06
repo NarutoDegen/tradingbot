@@ -1,3 +1,5 @@
+require('dotenv').config();  // Load environment variables
+
 const express = require("express");
 const bodyParser = require("body-parser");
 
@@ -22,9 +24,13 @@ app.post("/webhook", (req, res) => {
     res.status(200).json({ success: true, message: "Webhook received" });
 });
 
-// Test endpoint
+// Test endpoint (sending a value from .env)
 app.get("/test", (req, res) => {
-    res.send("Success");
+    // Fetch the value from .env (for example, "MY_SECRET")
+    const mySecret = process.env.MY_SECRET || "No secret found";
+
+    // Send the value of MY_SECRET from the .env file
+    res.send(`My secret is: ${mySecret}`);
 });
 
 // Start the server
