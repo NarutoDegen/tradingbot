@@ -1,15 +1,31 @@
 require('dotenv').config();  // Load environment variables
-
 const express = require("express");
 const bodyParser = require("body-parser");
 const fs = require("fs");
 const path = require("path");
+const { google } = require("googleapis");
+const { JWT } = require("google-auth-library");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware to parse JSON body
 app.use(bodyParser.json());
+
+// Decode the Google credentials from the environment variable
+const GOOGLE_CREDENTIALS = JSON.parse(Buffer.from(process.env.GOOGLE_CREDENTIALS_BASE64, 'base64').toString('utf-8'));
+
+// Authenticate using the service account
+const authClient = new JWT({
+    email: GOOGLE_CREDENTIALS.client_email,
+    key: GOOGLE_CREDENTIALS.private_key,
+    scopes: ['https://www.googleapis.com/auth/spreadsheets']
+});
+
+const sheets = google.sheets({ version: 'v4', auth: authClient });
+
+// Spreadsheet ID (to be used in the test route)
+const SPREADSHEET_ID = '1FQLYDEhsIDH5FStD0O5E08M6nhHzI1RYShO_o8b9rVY';
 
 // Placeholder function for Bybit API call
 function fire_bybit() {
@@ -33,6 +49,40 @@ app.get("/test", (req, res) => {
 
     // Send the value of MY_SECRET from the .env file
     res.send(`My secret is another update : ${mySecret}`);
+});
+
+// New test2 route to write to the Google Sheets
+app.get("/test2", async (req, res) => {
+    try {
+        // Get the next available row in column A
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: 'A:A', // Get column A
+        });
+
+        const rows = response.data.values || [];
+        const nextRow = rows.length + 1; // The next available row in column A
+
+        // Prepare the data to be written
+        const values = [
+            [`Fired!`],  // New value to be added in the next available row
+        ];
+
+        // Update the spreadsheet with the new value
+        await sheets.spreadsheets.values.update({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `A${nextRow}`,
+            valueInputOption: 'RAW',
+            resource: {
+                values,
+            },
+        });
+
+        res.status(200).json({ success: true, message: "Fired! added to the spreadsheet" });
+    } catch (err) {
+        console.error('Error writing to spreadsheet:', err);
+        res.status(500).json({ error: 'Error writing to spreadsheet' });
+    }
 });
 
 // Health check route for AWS Elastic Beanstalk
