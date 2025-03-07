@@ -30,7 +30,12 @@ app.get("/test", (req, res) => {
     const mySecret = process.env.MY_SECRET || "No secret found";
 
     // Send the value of MY_SECRET from the .env file
-    res.send(`My secret is power : ${mySecret}`);
+    res.send(`My secret is another update : ${mySecret}`);
+});
+
+// Health check route for AWS Elastic Beanstalk
+app.get("/", (req, res) => {
+    res.status(200).send("OK");
 });
 
 // Start the server
