@@ -1,0 +1,36 @@
+name: Deploy to Elastic Beanstalk
+
+on:
+  push:
+    branches:
+      - main  # Trigger on pushes to the main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22  # Use Node.js version 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Zip project for deployment
+        run: zip -r deploy.zip . -x "*.git*"
+
+      - name: Deploy to Elastic Beanstalk
+        uses: einaregilsson/beanstalk-deploy@v21
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}  # Store AWS credentials as secrets in GitHub
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          application_name: "tradingBot"  # Replace with your Elastic Beanstalk application name
+          environment_name: "tradingBot-env"  # Replace with your Elastic Beanstalk environment name
+          version_label: ${{ github.sha }}  # Unique version label for each deployment
+          region: "ap-southeast-1"  # Adjust to your AWS region (Singapore)
+          deployment_package: "deploy.zip"  # The zipped file to deploy
