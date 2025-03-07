@@ -37,7 +37,7 @@ app.get("/test", (req, res) => {
 
 // Health check route for AWS Elastic Beanstalk
 app.get("/", (req, res) => {
-    res.status(200).send("OK");
+    res.status(200).send("OK - works bitch");
 });
 
 // Node.js version route
