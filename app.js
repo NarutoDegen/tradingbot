@@ -38,6 +38,11 @@ app.get("/", (req, res) => {
     res.status(200).send("OK");
 });
 
+// Node.js version route
+app.get("/node-version", (req, res) => {
+    res.send(`Running Node.js version: ${process.version}`);
+});
+
 // Start the server
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
