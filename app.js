@@ -2,6 +2,8 @@ require('dotenv').config();  // Load environment variables
 
 const express = require("express");
 const bodyParser = require("body-parser");
+const fs = require("fs");
+const path = require("path");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -41,6 +43,22 @@ app.get("/", (req, res) => {
 // Node.js version route
 app.get("/node-version", (req, res) => {
     res.send(`Running Node.js version: ${process.version}`);
+});
+
+// Endpoint to serve package.json
+app.get("/package.json", (req, res) => {
+    const packageJsonPath = path.join(__dirname, "package.json");
+
+    // Read the package.json file
+    fs.readFile(packageJsonPath, "utf8", (err, data) => {
+        if (err) {
+            return res.status(500).json({ error: "Unable to read package.json" });
+        }
+
+        // Send the contents of package.json
+        res.setHeader("Content-Type", "application/json");
+        res.send(data);
+    });
 });
 
 // Start the server
