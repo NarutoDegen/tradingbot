@@ -30,7 +30,7 @@ app.get("/test", (req, res) => {
     const mySecret = process.env.MY_SECRET || "No secret found";
 
     // Send the value of MY_SECRET from the .env file
-    res.send(`My secret is: ${mySecret}`);
+    res.send(`My secret is power : ${mySecret}`);
 });
 
 // Start the server
