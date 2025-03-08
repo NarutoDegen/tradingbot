@@ -11,6 +11,7 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware to parse JSON body
 app.use(bodyParser.json());
+app.use(express.json()); // Middleware for parsing JSON bodies
 
 // Decode the Google credentials from the environment variable
 const GOOGLE_CREDENTIALS = JSON.parse(Buffer.from(process.env.GOOGLE_CREDENTIALS_BASE64, 'base64').toString('utf-8'));
@@ -32,83 +33,67 @@ function fire_bybit() {
     console.log("fire_bybit");
 }
 
-// Endpoint to receive TradingView webhooks
-app.post("/webhook", (req, res) => {
-    console.log("Received webhook:", req.body);
+// TradingView Webhook Route
+const TRADINGVIEW_SECRET = process.env.TRADINGVIEW_SECRET;
+
+app.all("/1", (req, res) => {
+    const password = req.body["x-secret"]; // Expecting password in custom header
+  
+    if (password !== TRADINGVIEW_SECRET) {
+        console.log("password fail");
+        return res.status(403).send("Forbidden");
+    }
+
+    // Log the raw request body to console
+    console.log("Received Request:", JSON.stringify(req.body, null, 2));
+
+    // Send raw data to the /writeToGoogle endpoint
+    // const rawJson = JSON.stringify(req.headers["x-secret"], null, 2);
+    const rawJson = JSON.stringify(req.body, null, 2);
+
+    // Send the raw JSON object to Google Sheets
+    const writeToGoogleUrl = `http://localhost:${PORT}/writeToGoogle?data=${encodeURIComponent(rawJson)}`;
     
-    // Call Bybit function (for now just logs a message)
-    fire_bybit();
-    
-    res.status(200).json({ success: true, message: "Webhook received" });
+    // Call the /writeToGoogle route with the raw data
+    require('http').get(writeToGoogleUrl, (response) => {
+        console.log(`Data written to Google Sheets: ${response.statusCode}`);
+    });
+
+    res.send("OK1212");
 });
 
-// Test endpoint (sending a value from .env)
-app.get("/test", (req, res) => {
-    // Fetch the value from .env (for example, "MY_SECRET")
-    const mySecret = process.env.MY_SECRET || "No secret found";
-
-    // Send the value of MY_SECRET from the .env file
-    res.send(`My secret is another update : ${mySecret}`);
-});
-
-// New test2 route to write to the Google Sheets
-app.get("/test2", async (req, res) => {
+// Google Sheets writing route
+app.all("/writeToGoogle", async (req, res) => {
     try {
+        const inputData = req.query.data || req.body.data || "Default Value";
+
         // Get the next available row in column A
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: 'A:A', // Get column A
+            range: "A:A",
         });
 
         const rows = response.data.values || [];
-        const nextRow = rows.length + 1; // The next available row in column A
+        const nextRow = rows.length + 1;
 
-        // Prepare the data to be written
-        const values = [
-            [`Fired!`],  // New value to be added in the next available row
-        ];
-
-        // Update the spreadsheet with the new value
+        // Write the input data to the next row in column A
         await sheets.spreadsheets.values.update({
             spreadsheetId: SPREADSHEET_ID,
             range: `A${nextRow}`,
-            valueInputOption: 'RAW',
-            resource: {
-                values,
-            },
+            valueInputOption: "RAW",
+            resource: { values: [[inputData]] },
         });
 
-        res.status(200).json({ success: true, message: "Fired! added to the spreadsheet" });
+        res.status(200).json({ success: true, message: `"${inputData}" added to row ${nextRow}` });
     } catch (err) {
-        console.error('Error writing to spreadsheet:', err);
-        res.status(500).json({ error: 'Error writing to spreadsheet' });
+        console.error("Error writing to spreadsheet:", err);
+        res.status(500).json({ error: "Failed to write to spreadsheet" });
     }
 });
 
 // Health check route for AWS Elastic Beanstalk
 app.get("/", (req, res) => {
-    res.status(200).send("OK - works bitch");
-});
-
-// Node.js version route
-app.get("/node-version", (req, res) => {
-    res.send(`Running Node.js version: ${process.version}`);
-});
-
-// Endpoint to serve package.json
-app.get("/package.json", (req, res) => {
-    const packageJsonPath = path.join(__dirname, "package.json");
-
-    // Read the package.json file
-    fs.readFile(packageJsonPath, "utf8", (err, data) => {
-        if (err) {
-            return res.status(500).json({ error: "Unable to read package.json" });
-        }
-
-        // Send the contents of package.json
-        res.setHeader("Content-Type", "application/json");
-        res.send(data);
-    });
+    res.status(200).send("OK");
 });
 
 // Start the server
